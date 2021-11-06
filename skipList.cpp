@@ -4,6 +4,7 @@
 
 #include "skipList.h"
 #include <random>
+#include <string.h>
 template <class K, class V, int MAXLEVEL>
 skipList<K, V, MAXLEVEL>::skipList(const K min_key, const K max_key):_min_key(min_key), _max_key(max_key), _max_level(MAXLEVEL) {
     p_listHead = new Node(min_key);
@@ -147,8 +148,5 @@ vector<KVpair<K, V>> skipList<K, V, MAXLEVEL>::get_from_range(const K &key1, con
 
 template <class K, class V, int MAXLEVEL>
 int skipList<K, V, MAXLEVEL>::generate_node_level() {
-    int r = rand() & ((1 << MAXLEVEL) - 1);
-    for(int i = 0; i < MAXLEVEL; i++){
-        if(r & (1 << i)) return i+1;
-    }
+    return ffs(rand() & ((1 << MAXLEVEL) -1))
 }
