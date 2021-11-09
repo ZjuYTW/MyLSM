@@ -5,7 +5,7 @@
 #ifndef MYLSM_DISKRUN_H
 #define MYLSM_DISKRUN_H
 #include "run.h"
-#include "bloomFilter.h"
+#include "bloom_filter.hpp"
 #include <cstdlib>
 #include <limits.h>
 #include <string>
@@ -24,12 +24,12 @@ public:
     KVpair_t *cache;
     int fd;
     unsigned int pageSize;
-    bloomFilter<K> bf;
+    bloom_filter bf;
 
     K _min_key = INT_MAX;
     K _max_key = INT_MIN;
-    diskRun(ull capacity, unsigned int pageSize, int level, int runID, double bf_fp);
-    ~diskRun();
+    diskRun<K, V>(ull capacity, unsigned int pageSize, int level, int runID, double bf_fp);
+    ~diskRun<K, V>();
     /*Write data from run to cache[offset] with length of len*/
     void write_data(const KVpair_t *run, const size_t offset, const ull& len);
     /*Construct fence pointer*/
@@ -39,8 +39,8 @@ public:
     ull get_index(const K &key, bool &found);
     V   get(const K &key, bool &found);
     void get_from_range(const K &key1, const K &key2, ull &i1, ull &i2);
-
-
+    ull size(){return _capacity;}
+    void set_size(ull size){_capacity = size;}
 private:
     ull _capacity;
     string _filename;

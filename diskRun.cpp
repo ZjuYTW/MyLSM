@@ -4,10 +4,14 @@
 
 #include "diskRun.h"
 template<class K, class V>
-diskRun<K, V>::diskRun(ull capacity, unsigned int pageSize, int level, int runID, double bf_fp):_capacity(capacity), pageSize(pageSize),_level(level),_runID(runID), _bf_fp(bf_fp),bf(capacity, bf_fp){
+diskRun<K, V>::diskRun(ull capacity, unsigned int pageSize, int level, int runID, double bf_fp):_capacity(capacity), pageSize(pageSize),_level(level),_runID(runID), _bf_fp(bf_fp){
     _filename = "C_" + to_string(level) + "_" + to_string(runID) + ".txt";
     size_t fsize = capacity * sizeof(KVpair_t);
-    
+    bloom_parameters param;
+    param.projected_element_count = capacity;
+    param.false_positive_probability = bf_fp;
+    param.compute_optimal_parameters();
+    bf = bloom_filter(param)
     fd = open(_filename, O_RDWRm | O_CREAT | O_TRUNC, (mode_t)0600);
     if(fd == -1){
         perror(("Error in open the file" + _filename).c_str());
@@ -51,7 +55,7 @@ void diskRun<K, V>::construct_index(){
     _fence_pointers.reserve(_capacity / pageSize);
     _max_fp = -1;
     for(int i = 0; i < _capacity; i++){
-        bf.add((K*) &cache[i].key, sizeof(K));
+        bf.insert((K*) &cache[i].key, sizeof(K));
         if(i % pageSize == 0){
             _fence_pointers.push_back(cache[i].key);
             _max_fp++;
@@ -84,13 +88,13 @@ ull diskRun<K, V>::bs(const ull offset, const ull n, const K &key, bool &found){
 
 template<class K, class V>
 void diskRun<K, V>::get_flanking_fp(const K &key, ull &start, ull &end, bool &found){
-    if(_max_fp == 0){
+    if(key < _min_key || key > _max_key){
+        found = false;
+    }else if(_max_fp == 0){
         // means just one fence, just capacity < pageSize
         start = 0;
         end = _capacity;
         found = true;
-    }else if(key < _fence_pointers[0].key){
-        found = false;
     }else{
         ull l = 0, r = _max_fp;
         while(l < r){
@@ -141,5 +145,13 @@ void diskRun<K, V>::get_from_range(const K &key1, const K &key2, ull &i1, ull&i2
 }
 
 template<class K, class V>
-void diskRun<K, V>::
+void diskRun<K, V>::do_unmap(){
+    size_t fsize = _capacity * sizeof(KVpair_t);
+    
+    if(munmap(cache, fsize) == -1){
+        perror(("Error un-mmaping the file " + _filename).c_str());
+    }
+    close(fd);
+    fd = -1
+}
 
